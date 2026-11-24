@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Change Detection & AI Analysis - PrivacyUpdate AI{% endblock %}
+{% block breadcrumb %}Change Detection & AI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Detected Policy Modifications & AI Analysis</h1>
+    <p class="page-subtitle">Granular syntactic diffs, 8-dimension privacy categorization, and generative impact explanations</p>
+  </div>
+  <div style="display: flex; gap: 0.5rem;">
+    <a href="{{ url_for('reviews.reviews_page') }}" class="btn btn-primary">
+      <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+      <span>Open Review Queue</span>
+    </a>
+  </div>
+</div>
+
+<!-- Filters Bar -->
+<div class="card" style="padding: 1rem; margin-bottom: 1.5rem;">
+  <form method="GET" action="{{ url_for('changes.changes_page') }}" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) auto; gap: 0.75rem; align-items: flex-end;">
+    <div class="form-group" style="margin-bottom: 0;">
+      <label class="form-label">Website</label>
+      <select name="source_id" class="form-select">
+        <option value="">All Websites</option>
+        {% for s in sources %}
+        <option value="{{ s.id }}" {% if selected_source_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group" style="margin-bottom: 0;">
+      <label class="form-label">Privacy Category</label>
+      <select name="category" class="form-select">
+        <option value="">All Categories</option>
+        {% for cat in categories %}
+        <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group" style="margin-bottom: 0;">
+      <label class="form-label">Severity Level</label>
+      <select name="severity" class="form-select">
+        <option value="">All Severities</option>
+        <option value="Critical" {% if selected_severity == 'Critical' %}selected{% endif %}>Critical</option>
+        <option value="High" {% if selected_severity == 'High' %}selected{% endif %}>High</option>
+        <option value="Medium" {% if selected_severity == 'Medium' %}selected{% endif %}>Medium</option>
+        <option value="Low" {% if selected_severity == 'Low' %}selected{% endif %}>Low</option>
+      </select>
+    </div>
+
+    <div class="form-group" style="margin-bottom: 0;">
+      <label class="form-label">Human Review Status</label>
+      <select name="status" class="form-select">
+        <option value="">All Statuses</option>
+        <option value="Pending" {% if selected_status == 'Pending' %}selected{% endif %}>Pending</option>
+        <option value="Approved" {% if selected_status == 'Approved' %}selected{% endif %}>Approved</option>
+        <option value="Flagged" {% if selected_status == 'Flagged' %}selected{% endif %}>Flagged / Rejected</option>
+      </select>
+    </div>
+
+    <div style="display: flex; gap: 0.5rem;">
+      <button type="submit" class="btn btn-primary" style="padding: 0.55rem 0.85rem;">Filter</button>
+      <a href="{{ url_for('changes.changes_page') }}" class="btn btn-secondary" style="padding: 0.55rem 0.85rem;">Reset</a>
+    </div>
+  </form>
+</div>
+
+<!-- Changes Cards List -->
+<div style="display: flex; flex-direction: column; gap: 1.25rem;">
+  {% for c in changes %}
+  <div class="card" style="margin-bottom: 0;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
+      <div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+          <h3 style="font-size: 1.05rem; color: var(--primary); font-weight: 700;">{{ c.affected_section }}</h3>
+          <span class="badge {% if c.change_type == 'Added' %}badge-success{% elif c.change_type == 'Removed' %}badge-danger{% else %}badge-warning{% endif %}">
+            {{ c.change_type }}
+          </span>
+        </div>
+        <div style="font-size: 0.82rem; color: var(--text-muted);">
+          Service: <strong>{{ c.source_name }}</strong> &bull; Detected: {{ c.detected_at|datetime_format }}
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+        <span class="badge badge-neutral" style="font-size: 0.78rem;">{{ c.category }}</span>
+        
+        {% if c.severity == 'Critical' %}
+        <span class="badge badge-danger">Critical Risk</span>
+        {% elif c.severity == 'High' %}
+        <span class="badge badge-danger">High Risk</span>
+        {% elif c.severity == 'Medium' %}
+        <span class="badge badge-warning">Medium Risk</span>
+        {% else %}
+        <span class="badge badge-success">Low Risk</span>
+        {% endif %}
+
+        {% if c.review_status == 'Approved' %}
+        <span class="badge badge-success" title="Verified by {{ c.reviewer_name }}">
+          Verified Human Approved
+        </span>
+        {% elif c.review_status == 'Pending' %}
+        <span class="badge badge-warning">Pending Review</span>
+        {% else %}
+        <span class="badge badge-danger">Flagged by Human Reviewer</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- AI Intelligence Block -->
+    <div style="background: rgba(52, 78, 65, 0.05); border-left: 3px solid var(--primary); padding: 0.85rem 1rem; border-radius: var(--radius-sm); margin-bottom: 1rem;">
+      <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.35rem;">
+        <span class="badge badge-ai" style="font-size: 0.7rem;">AI-Assisted Analysis</span>
+        <span style="font-size: 0.75rem; color: var(--text-muted);">&bull; Automated Summary & Privacy Impact</span>
+      </div>
+      <p style="font-size: 0.88rem; font-weight: 500; color: var(--text-primary); margin-bottom: 0.35rem;">
+        {{ c.ai_summary }}
+      </p>
+      <div style="font-size: 0.82rem; color: var(--accent); font-weight: 500;">
+        <strong>Privacy Implications:</strong> {{ c.privacy_implications }}
+      </div>
+    </div>
+
+    <!-- Collapsible Diff Preview -->
+    <details style="margin-bottom: 0.75rem;">
+      <summary style="font-size: 0.82rem; font-weight: 600; cursor: pointer; color: var(--text-muted); user-select: none;">
+        Show Syntactic Diff (Previous vs Updated Text)
+      </summary>
+      <div class="diff-container" style="margin-top: 0.65rem;">
+        <div class="diff-pane old">
+          <div style="font-weight: 600; color: var(--accent); margin-bottom: 0.25rem; font-size: 0.75rem;">Previous Wording:</div>
+          {{ c.previous_content if c.previous_content else '(None - Clause was newly added)' }}
+        </div>
+        <div class="diff-pane new">
+          <div style="font-weight: 600; color: var(--primary); margin-bottom: 0.25rem; font-size: 0.75rem;">Updated Wording:</div>
+          {{ c.updated_content if c.updated_content else '(None - Clause was deleted)' }}
+        </div>
+      </div>
+    </details>
+
+    <!-- Reviewer Audit Status Footer -->
+    {% if c.reviewer_name %}
+    <div style="padding-top: 0.65rem; border-top: 1px solid var(--border-color); font-size: 0.78rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+      <div>
+        Human Auditor: <strong>{{ c.reviewer_name }}</strong> &bull; Decision: <strong style="color: var(--primary);">{{ c.decision }}</strong> on {{ c.reviewed_at|datetime_format }}
+      </div>
+      {% if c.review_comments %}
+      <div style="font-style: italic;">"{{ c.review_comments }}"</div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="card" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+    No detected changes match the current filter criteria.
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

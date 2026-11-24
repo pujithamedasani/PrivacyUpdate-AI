@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}Human Review - PrivacyUpdate AI{% endblock %}
+{% block breadcrumb %}Human Review Interface{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Human-in-the-Loop Compliance Review</h1>
+    <p class="page-subtitle">Verify AI classifications, audit detected privacy modifications, and record compliance decisions</p>
+  </div>
+  <div style="display: flex; gap: 0.5rem;">
+    <a href="{{ url_for('reviews.reviews_page', status='Pending') }}" class="btn {% if selected_status == 'Pending' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+      Pending Queue ({{ pending_count }})
+    </a>
+    <a href="{{ url_for('reviews.reviews_page', status='Approved') }}" class="btn {% if selected_status == 'Approved' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+      Approved ({{ approved_count }})
+    </a>
+    <a href="{{ url_for('reviews.reviews_page', status='Flagged') }}" class="btn {% if selected_status == 'Flagged' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+      Flagged / Rejected ({{ flagged_count }})
+    </a>
+    <a href="{{ url_for('reviews.reviews_page', status='All') }}" class="btn {% if selected_status == 'All' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+      All
+    </a>
+  </div>
+</div>
+
+<!-- Active Review Queue -->
+<div style="display: flex; flex-direction: column; gap: 1.25rem; margin-bottom: 2rem;">
+  {% for c in changes %}
+  <div class="card" id="change-card-{{ c.id }}" style="margin-bottom: 0;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+      <div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <h3 style="font-size: 1.05rem; color: var(--primary); font-weight: 700;">{{ c.affected_section }}</h3>
+          <span class="badge {% if c.change_type == 'Added' %}badge-success{% elif c.change_type == 'Removed' %}badge-danger{% else %}badge-warning{% endif %}">
+            {{ c.change_type }}
+          </span>
+          <span class="badge badge-neutral">{{ c.category }}</span>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem;">
+          Website: <strong>{{ c.source_name }}</strong> &bull; Detected: {{ c.detected_at|datetime_format }}
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        {% if c.severity == 'Critical' or c.severity == 'High' %}
+        <span class="badge badge-danger">{{ c.severity }} Severity</span>
+        {% elif c.severity == 'Medium' %}
+        <span class="badge badge-warning">{{ c.severity }} Severity</span>
+        {% else %}
+        <span class="badge badge-success">{{ c.severity }} Severity</span>
+        {% endif %}
+
+        {% if c.review_status == 'Approved' %}
+        <span class="badge badge-success">Approved</span>
+        {% elif c.review_status == 'Pending' %}
+        <span class="badge badge-warning">Pending Review</span>
+        {% else %}
+        <span class="badge badge-danger">{{ c.review_status }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- AI Analysis Display -->
+    <div style="background: rgba(52, 78, 65, 0.05); border-left: 3px solid var(--primary); padding: 0.85rem 1rem; border-radius: var(--radius-sm); margin-bottom: 1rem;">
+      <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 0.2rem;">
+        AI-Generated Assessment
+      </div>
+      <p style="font-size: 0.88rem; font-weight: 500; color: var(--text-primary); margin-bottom: 0.35rem;">
+        {{ c.ai_summary }}
+      </p>
+      <div style="font-size: 0.82rem; color: var(--accent);">
+        <strong>Potential Privacy Implications:</strong> {{ c.privacy_implications }}
+      </div>
+    </div>
+
+    <!-- Diff Viewer Pane -->
+    <div class="diff-container" style="margin-bottom: 1rem;">
+      <div class="diff-pane old">
+        <div style="font-weight: 600; color: var(--accent); margin-bottom: 0.25rem; font-size: 0.75rem;">Previous Wording:</div>
+        {{ c.previous_content if c.previous_content else '(None - Clause was newly added)' }}
+      </div>
+      <div class="diff-pane new">
+        <div style="font-weight: 600; color: var(--primary); margin-bottom: 0.25rem; font-size: 0.75rem;">Updated Wording:</div>
+        {{ c.updated_content if c.updated_content else '(None - Clause was deleted)' }}
+      </div>
+    </div>
+
+    <!-- Review Action Form -->
+    <div style="background: var(--bg-subtle); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+      <div style="display: grid; grid-template-columns: 220px 1fr auto; gap: 0.75rem; align-items: center;">
+        <div>
+          <label class="form-label" style="margin-bottom: 0.2rem;">Reviewer Name</label>
+          <select class="form-select" id="reviewer-id-{{ c.id }}">
+            {% for tm in team_members %}
+            <option value="{{ tm.id }}" data-name="{{ tm.name }}" {% if tm.name == 'Pujitha Medasani' or tm.id == 1 %}selected{% endif %}>{{ tm.name }} ({{ tm.role.split('&')[0] }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="form-label" style="margin-bottom: 0.2rem;">Audit Comments / Rationale</label>
+          <input type="text" class="form-control" id="comments-{{ c.id }}" placeholder="e.g. Verified against official legal changelog..." value="{{ c.comments or '' }}">
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; padding-top: 1.25rem;">
+          <button class="btn btn-primary btn-sm btn-submit-rev" data-id="{{ c.id }}" data-decision="Approved">
+            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Approve</span>
+          </button>
+          <button class="btn btn-secondary btn-sm btn-submit-rev" style="color: var(--accent); border-color: var(--accent);" data-id="{{ c.id }}" data-decision="Flagged">
+            <span>Flag / Reject</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="card" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+    No policy modifications currently in the '{{ selected_status }}' queue.
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Review History Audit Trail Section -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">
+      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 8v4l3 3"></path><circle cx="12" cy="12" r="10"></circle></svg>
+      Human Review Audit Trail (Database Logs)
+    </h3>
+    <span class="badge badge-neutral">Tamper-evident record</span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Reviewed At</th>
+          <th>Website</th>
+          <th>Section</th>
+          <th>Decision</th>
+          <th>Reviewer</th>
+          <th>Audit Comments</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in review_history %}
+        <tr>
+          <td style="font-size: 0.8rem; color: var(--text-muted); white-space: nowrap;">{{ r.reviewed_at|datetime_format }}</td>
+          <td><strong>{{ r.source_name }}</strong></td>
+          <td style="font-size: 0.82rem;">{{ r.affected_section }}</td>
+          <td>
+            {% if r.decision == 'Approved' %}
+            <span class="badge badge-success">Approved</span>
+            {% else %}
+            <span class="badge badge-danger">{{ r.decision }}</span>
+            {% endif %}
+          </td>
+          <td>{{ r.reviewer_name }}</td>
+          <td style="font-size: 0.82rem; color: var(--text-muted);">{{ r.comments or '(No comment recorded)' }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No review audit entries recorded yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('click', (e) => {
+  const revBtn = e.target.closest('.btn-submit-rev');
+  if (revBtn) {
+    submitReview(Number(revBtn.dataset.id), revBtn.dataset.decision);
+    return;
+  }
+});
+
+async function submitReview(changeId, decision) {
+  const select = document.getElementById(`reviewer-id-${changeId}`);
+  const reviewerId = select.value;
+  const reviewerName = select.options[select.selectedIndex].getAttribute('data-name');
+  const comments = document.getElementById(`comments-${changeId}`).value.trim();
+
+  try {
+    const res = await fetch('/api/reviews/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        change_id: changeId,
+        reviewer_id: reviewerId,
+        reviewer_name: reviewerName,
+        decision: decision,
+        comments: comments
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message, decision === 'Approved' ? 'success' : 'warning');
+      const card = document.getElementById(`change-card-${changeId}`);
+      if (card) {
+        card.style.opacity = '0.4';
+        setTimeout(() => window.location.reload(), 600);
+      }
+    } else {
+      showToast(data.error || 'Review submission failed.', 'error');
+    }
+  } catch (err) {
+    showToast(`Error: ${err.message}`, 'error');
+  }
+}
+</script>
+{% endblock %}

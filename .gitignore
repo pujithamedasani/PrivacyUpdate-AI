@@ -1,0 +1,62 @@
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# SQLite database and backups
+*.db
+*.sqlite
+*.sqlite3
+data/backups/
+
+# Uploaded documents and generated files
+uploads/*
+!uploads/.gitkeep
+
+# Keep data directory structure
+data/*
+!data/.gitkeep
+!data/backups/
+
+# Flask instance files
+instance/
+
+# Logs
+*.log
+logs/
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Build and distribution
+build/
+dist/
+*.egg-info/
+
+# Temporary files
+*.tmp
+*.bak

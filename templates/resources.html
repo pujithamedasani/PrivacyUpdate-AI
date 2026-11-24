@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Technologies & Resources - PrivacyUpdate AI{% endblock %}
+{% block breadcrumb %}Technologies & Resources{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Technologies & Project Resources</h1>
+    <p class="page-subtitle">Core technical stack components, system dependencies, API documentation, and academic references</p>
+  </div>
+  <button class="btn btn-primary" onclick="openAddResourceModal()">
+    <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    <span>Add Project Resource</span>
+  </button>
+</div>
+
+<!-- Resources Table -->
+<div class="table-responsive">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Technology / Resource</th>
+        <th>Category</th>
+        <th>Purpose & System Function</th>
+        <th>Documentation</th>
+        <th>Classification</th>
+        <th style="text-align: right;">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in resources %}
+      <tr id="resource-row-{{ r.id }}">
+        <td>
+          <strong style="color: var(--primary);">{{ r.name }}</strong>
+        </td>
+        <td>
+          <span class="badge badge-neutral">{{ r.category }}</span>
+        </td>
+        <td style="font-size: 0.85rem; color: var(--text-primary); max-width: 400px;">
+          {{ r.description }}
+        </td>
+        <td>
+          {% if r.doc_url %}
+          <a href="{{ r.doc_url }}" target="_blank" rel="noopener" style="font-size: 0.8rem; color: var(--primary); text-decoration: none; font-weight: 500;">
+            Docs &nearr;
+          </a>
+          {% else %}
+          <span style="font-size: 0.78rem; color: var(--text-light);">None</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if r.is_system == 1 %}
+          <span class="badge badge-success">Core System Stack</span>
+          {% else %}
+          <span class="badge badge-neutral">Custom Reference</span>
+          {% endif %}
+        </td>
+        <td style="text-align: right; white-space: nowrap;">
+          <button class="btn btn-secondary btn-sm btn-edit-res"
+            data-id="{{ r.id }}"
+            data-name="{{ r.name }}"
+            data-category="{{ r.category }}"
+            data-desc="{{ r.description }}"
+            data-url="{{ r.doc_url or '' }}">
+            Edit
+          </button>
+          {% if r.is_system != 1 %}
+          <button class="btn btn-secondary btn-sm btn-delete-res" style="color: #D32F2F;"
+            data-id="{{ r.id }}"
+            data-name="{{ r.name }}">
+            Delete
+          </button>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Add Resource Modal -->
+<div class="modal-backdrop" id="add-resource-modal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 class="modal-title">Add Project Resource</h3>
+      <button class="modal-close" onclick="closeModal('add-resource-modal')">&times;</button>
+    </div>
+    <form id="add-resource-form" onsubmit="handleAddResource(event)">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Technology / Tool Name</label>
+          <input type="text" class="form-control" id="add-res-name" required placeholder="e.g. Beautiful Soup 4">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <input type="text" class="form-control" id="add-res-cat" required placeholder="e.g. Parsing Engine, Cloud Storage, or Library">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Purpose & Role in PrivacyUpdate AI</label>
+          <textarea class="form-control" id="add-res-desc" rows="3" required placeholder="How this tool is used within the system architecture..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Official Documentation URL</label>
+          <input type="url" class="form-control" id="add-res-url" placeholder="https://...">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('add-resource-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Resource</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Resource Modal -->
+<div class="modal-backdrop" id="edit-resource-modal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 class="modal-title">Edit Resource</h3>
+      <button class="modal-close" onclick="closeModal('edit-resource-modal')">&times;</button>
+    </div>
+    <form id="edit-resource-form" onsubmit="handleEditResource(event)">
+      <input type="hidden" id="edit-res-id">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Resource Name</label>
+          <input type="text" class="form-control" id="edit-res-name" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <input type="text" class="form-control" id="edit-res-cat" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Purpose & Role</label>
+          <textarea class="form-control" id="edit-res-desc" rows="3" required></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Documentation URL</label>
+          <input type="url" class="form-control" id="edit-res-url">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('edit-resource-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('click', (e) => {
+  const editBtn = e.target.closest('.btn-edit-res');
+  if (editBtn) {
+    const ds = editBtn.dataset;
+    openEditResourceModal(ds.id, ds.name, ds.category, ds.desc, ds.url);
+    return;
+  }
+  const delBtn = e.target.closest('.btn-delete-res');
+  if (delBtn) {
+    deleteResource(delBtn.dataset.id, delBtn.dataset.name);
+    return;
+  }
+});
+
+function openAddResourceModal() {
+  document.getElementById('add-resource-form').reset();
+  openModal('add-resource-modal');
+}
+
+async function handleAddResource(e) {
+  e.preventDefault();
+  const name = document.getElementById('add-res-name').value.trim();
+  const category = document.getElementById('add-res-cat').value.trim();
+  const description = document.getElementById('add-res-desc').value.trim();
+  const doc_url = document.getElementById('add-res-url').value.trim();
+
+  try {
+    const res = await fetch('/api/resources', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, category, description, doc_url })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Resource added successfully.', 'success');
+      closeModal('add-resource-modal');
+      setTimeout(() => window.location.reload(), 600);
+    } else {
+      showToast(data.error || 'Failed to add resource.', 'error');
+    }
+  } catch (err) {
+    showToast(`Error: ${err.message}`, 'error');
+  }
+}
+
+function openEditResourceModal(id, name, cat, desc, url) {
+  document.getElementById('edit-res-id').value = id;
+  document.getElementById('edit-res-name').value = name;
+  document.getElementById('edit-res-cat').value = cat;
+  document.getElementById('edit-res-desc').value = desc;
+  document.getElementById('edit-res-url').value = url;
+  openModal('edit-resource-modal');
+}
+
+async function handleEditResource(e) {
+  e.preventDefault();
+  const id = document.getElementById('edit-res-id').value;
+  const name = document.getElementById('edit-res-name').value.trim();
+  const category = document.getElementById('edit-res-cat').value.trim();
+  const description = document.getElementById('edit-res-desc').value.trim();
+  const doc_url = document.getElementById('edit-res-url').value.trim();
+
+  try {
+    const res = await fetch(`/api/resources/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, category, description, doc_url })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Resource updated successfully.', 'success');
+      closeModal('edit-resource-modal');
+      setTimeout(() => window.location.reload(), 600);
+    } else {
+      showToast(data.error || 'Failed to update resource.', 'error');
+    }
+  } catch (err) {
+    showToast(`Error: ${err.message}`, 'error');
+  }
+}
+
+async function deleteResource(id, name) {
+  if (!confirm(`Are you sure you want to delete '${name}'?`)) return;
+  try {
+    const res = await fetch(`/api/resources/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message, 'success');
+      const row = document.getElementById(`resource-row-${id}`);
+      if (row) row.remove();
+    } else {
+      showToast(data.error || 'Failed to delete resource.', 'error');
+    }
+  } catch (err) {
+    showToast(`Error: ${err.message}`, 'error');
+  }
+}
+</script>
+{% endblock %}

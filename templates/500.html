@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}500 - Server Error - PrivacyUpdate AI{% endblock %}
+{% block breadcrumb %}Server Error{% endblock %}
+
+{% block content %}
+<div class="card" style="text-align: center; padding: 4rem 2rem; max-width: 600px; margin: 3rem auto;">
+  <div style="font-size: 3.5rem; font-weight: 800; color: var(--accent); line-height: 1;">500</div>
+  <h2 style="font-size: 1.35rem; color: var(--primary); margin: 0.75rem 0 0.5rem;">Internal Processing Exception</h2>
+  <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+    An unexpected error occurred during database transaction or external API extraction.
+  </p>
+  {% if error %}
+  <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); padding: 0.75rem; border-radius: var(--radius-sm); font-size: 0.8rem; font-family: monospace; color: var(--status-danger); margin-bottom: 1.5rem; text-align: left; overflow-x: auto;">
+    {{ error }}
+  </div>
+  {% endif %}
+  <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">Return to Dashboard</a>
+</div>
+{% endblock %}

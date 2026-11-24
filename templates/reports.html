@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block title %}Reports & Analytics - PrivacyUpdate AI{% endblock %}
+{% block breadcrumb %}Reports & Analytics{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Compliance Telemetry & System Analytics</h1>
+    <p class="page-subtitle">Academic project audit reports, historical extraction metrics, and database backup exports</p>
+  </div>
+  <div style="display: flex; gap: 0.5rem;">
+    <a href="{{ url_for('reports.export_changes_csv') }}" class="btn btn-secondary">
+      <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+      <span>Export Changes (CSV)</span>
+    </a>
+    <a href="{{ url_for('reports.export_full_report_json') }}" class="btn btn-secondary">
+      <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+      <span>Export Full JSON</span>
+    </a>
+    <a href="{{ url_for('reports.download_database_backup') }}" class="btn btn-primary">
+      <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+      <span>Database Backup (.db)</span>
+    </a>
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="card" style="padding: 1rem; margin-bottom: 1.5rem;">
+  <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
+      <label class="form-label" style="margin-bottom: 0;">Scope Website:</label>
+      <select class="form-select" id="report-source-filter" style="width: auto; min-width: 220px;" onchange="loadReportAnalytics()">
+        <option value="">All Monitored Services</option>
+        {% for s in sources %}
+        <option value="{{ s.id }}">{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="window.print()">
+      <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+      <span>Print Report</span>
+    </button>
+  </div>
+</div>
+
+<!-- Metrics Cards Summary -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon primary">
+      <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+    </div>
+    <div class="stat-data">
+      <div class="stat-value" id="rep-sources">-</div>
+      <div class="stat-label">Monitored Policies</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon secondary">
+      <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+    </div>
+    <div class="stat-data">
+      <div class="stat-value" id="rep-snapshots">-</div>
+      <div class="stat-label">Version Snapshots</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon accent">
+      <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+    </div>
+    <div class="stat-data">
+      <div class="stat-value" id="rep-changes">-</div>
+      <div class="stat-label">Detected Changes</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon info">
+      <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+    </div>
+    <div class="stat-data">
+      <div class="stat-value" id="rep-reviews-ratio">-</div>
+      <div class="stat-label">Human Review Ratio</div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Grid -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.5rem;">
+  <div class="card" style="margin-bottom: 0;">
+    <div class="card-header">
+      <h3 class="card-title">Privacy Modifications by Risk Severity</h3>
+    </div>
+    <div style="height: 250px;">
+      <canvas id="rep-chart-severity"></canvas>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom: 0;">
+    <div class="card-header">
+      <h3 class="card-title">Change Distribution Across 8 Privacy Dimensions</h3>
+    </div>
+    <div style="height: 250px;">
+      <canvas id="rep-chart-categories"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Monitored Sources Coverage & Compliance Summary -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Monitored Policies Coverage</h3>
+      <a href="{{ url_for('sources.sources_page') }}" class="btn btn-secondary btn-sm" style="padding: 0.15rem 0.5rem; font-size: 0.72rem;">Manage Sources</a>
+    </div>
+    <div id="rep-sources-list" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Compliance Decision Breakdown</h3>
+      <a href="{{ url_for('reviews.reviews_page') }}" class="btn btn-secondary btn-sm" style="padding: 0.15rem 0.5rem; font-size: 0.72rem;">Review Queue</a>
+    </div>
+    <div id="rep-audit-list" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let sevChart = null;
+let catChart = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadReportAnalytics();
+});
+
+async function loadReportAnalytics() {
+  const sourceId = document.getElementById('report-source-filter').value;
+  const url = sourceId ? `/api/reports/summary?source_id=${sourceId}` : '/api/reports/summary';
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!data.success) return;
+
+    // Populate KPIs
+    document.getElementById('rep-sources').textContent = data.kpis.total_sources;
+    document.getElementById('rep-snapshots').textContent = data.kpis.total_snapshots;
+    document.getElementById('rep-changes').textContent = data.kpis.total_changes;
+    
+    const totalRev = data.kpis.approved_reviews + data.kpis.pending_reviews + data.kpis.flagged_reviews;
+    const revPct = totalRev > 0 ? Math.round(((data.kpis.approved_reviews + data.kpis.flagged_reviews) / totalRev) * 100) : 0;
+    document.getElementById('rep-reviews-ratio').textContent = `${revPct}% (${data.kpis.approved_reviews} Approved)`;
+
+    // Severity Chart
+    renderSeverityChart(data.severities);
+
+    // Categories Chart
+    renderCategoriesChart(data.categories);
+
+    // Sources Summary List
+    renderSourcesList(data.sources_summary);
+
+    // Compliance Audit Summary
+    renderAuditList(data.kpis);
+
+  } catch (err) {
+    console.error('Failed to load report analytics:', err);
+  }
+}
+
+function renderSeverityChart(severities) {
+  const ctx = document.getElementById('rep-chart-severity');
+  if (!ctx) return;
+
+  const labels = Object.keys(severities);
+  const counts = Object.values(severities);
+
+  if (sevChart) sevChart.destroy();
+  sevChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Changes',
+        data: counts,
+        backgroundColor: ['#C17C5A', '#D97706', '#A3B18A', '#344E41'],
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+      }
+    }
+  });
+}
+
+function renderCategoriesChart(categories) {
+  const ctx = document.getElementById('rep-chart-categories');
+  if (!ctx) return;
+
+  const labels = Object.keys(categories);
+  const counts = Object.values(categories);
+
+  if (catChart) catChart.destroy();
+  catChart = new Chart(ctx, {
+    type: 'polarArea',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: counts,
+        backgroundColor: [
+          'rgba(52, 78, 65, 0.75)',
+          'rgba(163, 177, 138, 0.75)',
+          'rgba(193, 124, 90, 0.75)',
+          'rgba(88, 129, 87, 0.75)',
+          'rgba(218, 161, 94, 0.75)',
+          'rgba(188, 108, 37, 0.75)',
+          'rgba(107, 112, 92, 0.75)',
+          'rgba(58, 90, 64, 0.75)'
+        ]
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+function renderSourcesList(sources) {
+  const container = document.getElementById('rep-sources-list');
+  if (!container || !sources) return;
+
+  container.innerHTML = sources.map(s => `
+    <div style="background:var(--bg-subtle); padding:0.65rem 0.85rem; border-radius:var(--radius-sm); border:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <strong style="font-size:0.85rem; color:var(--primary); display:block;">${escapeHtml(s.name)}</strong>
+        <span style="font-size:0.75rem; color:var(--text-muted);">${s.total_changes || 0} detected changes</span>
+      </div>
+      <span class="badge ${s.is_active ? 'badge-success' : 'badge-neutral'}" style="font-size:0.7rem;">
+        ${s.is_active ? 'Active' : 'Paused'}
+      </span>
+    </div>
+  `).join('');
+}
+
+function renderAuditList(kpis) {
+  const container = document.getElementById('rep-audit-list');
+  if (!container || !kpis) return;
+
+  container.innerHTML = `
+    <div style="background:var(--bg-subtle); padding:0.65rem 0.85rem; border-radius:var(--radius-sm); border:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+      <span style="font-size:0.85rem; color:var(--text-primary); font-weight:600;">Approved by Human Reviewer</span>
+      <span class="badge badge-success" style="font-size:0.72rem;">${kpis.approved_reviews} Policies</span>
+    </div>
+    <div style="background:var(--bg-subtle); padding:0.65rem 0.85rem; border-radius:var(--radius-sm); border:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+      <span style="font-size:0.85rem; color:var(--text-primary); font-weight:600;">Pending Review Queue</span>
+      <span class="badge badge-warning" style="font-size:0.72rem;">${kpis.pending_reviews} Changes</span>
+    </div>
+    <div style="background:var(--bg-subtle); padding:0.65rem 0.85rem; border-radius:var(--radius-sm); border:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+      <span style="font-size:0.85rem; color:var(--text-primary); font-weight:600;">Flagged / High Risk Decisions</span>
+      <span class="badge badge-danger" style="font-size:0.72rem;">${kpis.flagged_reviews} Flags</span>
+    </div>
+  `;
+}
+</script>
+{% endblock %}

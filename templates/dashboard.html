@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - PrivacyUpdate AI{% endblock %}
+{% block breadcrumb %}Overview{% endblock %}
+
+{% block content %}
+<!-- Welcome Section -->
+<div class="card" style="background: linear-gradient(135deg, #FAF8F5 0%, #F1ECE3 100%); border-left: 4px solid var(--primary); margin-bottom: 1.5rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h2 style="font-size: 1.35rem; color: var(--primary); margin-bottom: 0.25rem;">
+        Welcome to {{ project.title if project else 'PrivacyUpdate AI' }}
+      </h2>
+      <p style="font-size: 0.88rem; color: var(--text-muted); max-width: 800px;">
+        {{ project.description if project else 'An intelligent privacy policy monitoring and change detection platform combining Firecrawl extraction, Memento web archives, and AI-assisted risk classification.' }}
+      </p>
+    </div>
+    <div style="display: flex; gap: 0.5rem;">
+      <a href="{{ url_for('sources.sources_page') }}" class="btn btn-primary btn-sm">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <span>View Sources</span>
+      </a>
+      <a href="{{ url_for('reviews.reviews_page') }}" class="btn btn-secondary btn-sm">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+        <span>Review Queue</span>
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Dynamic KPI Metrics Grid -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon primary">
+      <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+    </div>
+    <div class="stat-data">
+      <div class="stat-value" id="kpi-sources">...</div>
+      <div class="stat-label">Monitored Websites (<span id="kpi-active-sources">0</span> Active)</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon secondary">
+      <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+    </div>
+    <div class="stat-data">
+      <div class="stat-value" id="kpi-snapshots">...</div>
+      <div class="stat-label">Collected Snapshots</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon accent">
+      <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+    </div>
+    <div class="stat-data">
+      <div class="stat-value" id="kpi-changes">...</div>
+      <div class="stat-label">Detected Changes</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon info">
+      <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+    </div>
+    <div class="stat-data">
+      <div class="stat-value" id="kpi-pending-reviews">...</div>
+      <div class="stat-label">Pending Human Reviews</div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Section: 2x2 Grid -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+  <!-- Chart 1: Monitoring Activity Over Time -->
+  <div class="card" style="margin-bottom: 0;">
+    <div class="card-header">
+      <h3 class="card-title">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+        Monitoring Activity Over Time
+      </h3>
+      <span class="badge badge-neutral" style="font-size: 0.7rem;">Scans & Captures</span>
+    </div>
+    <div style="height: 240px; position: relative;">
+      <canvas id="chart-timeline"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart 2: Change Categories Distribution -->
+  <div class="card" style="margin-bottom: 0;">
+    <div class="card-header">
+      <h3 class="card-title">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a10 10 0 0 1 10 10"></path></svg>
+        Change Categories Distribution
+      </h3>
+      <span class="badge badge-neutral" style="font-size: 0.7rem;">8 Privacy Dimensions</span>
+    </div>
+    <div style="height: 240px; position: relative;">
+      <canvas id="chart-categories"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart 3: Review Status Distribution -->
+  <div class="card" style="margin-bottom: 0;">
+    <div class="card-header">
+      <h3 class="card-title">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        Human Review Status
+      </h3>
+      <span class="badge badge-neutral" style="font-size: 0.7rem;">Compliance Audit</span>
+    </div>
+    <div style="height: 240px; position: relative;">
+      <canvas id="chart-reviews"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart 4: Policy Change Risk Breakdown -->
+  <div class="card" style="margin-bottom: 0;">
+    <div class="card-header">
+      <h3 class="card-title">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        Policy Change Risk Breakdown
+      </h3>
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span class="badge badge-neutral" style="font-size: 0.7rem;">Severity Distribution</span>
+        <a href="{{ url_for('changes.changes_page') }}" class="btn btn-secondary btn-sm" style="padding: 0.15rem 0.5rem; font-size: 0.72rem;">View Changes</a>
+      </div>
+    </div>
+    <div style="height: 240px; position: relative;">
+      <canvas id="chart-severity"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Changes & Recent Logs (2 Columns) -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 1.25rem;">
+  <!-- Recent Changes -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>
+        Latest Detected Policy Changes
+      </h3>
+      <a href="{{ url_for('changes.changes_page') }}" class="btn btn-secondary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">View All</a>
+    </div>
+
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Website</th>
+            <th>Section</th>
+            <th>Category</th>
+            <th>Severity</th>
+            <th>Review</th>
+          </tr>
+        </thead>
+        <tbody id="recent-changes-tbody">
+          <tr>
+            <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Loading recent policy modifications...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Recent Scan Logs -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        Recent Monitoring Activity
+      </h3>
+      <a href="{{ url_for('sources.sources_page') }}" class="btn btn-secondary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">Scan Manager</a>
+    </div>
+
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Website</th>
+            <th>Tool</th>
+            <th>Status</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody id="recent-logs-tbody">
+          <tr>
+            <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Loading monitoring events...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

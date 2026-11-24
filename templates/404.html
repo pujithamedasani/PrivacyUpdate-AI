@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}404 - Page Not Found - PrivacyUpdate AI{% endblock %}
+{% block breadcrumb %}Page Not Found{% endblock %}
+
+{% block content %}
+<div class="card" style="text-align: center; padding: 4rem 2rem; max-width: 600px; margin: 3rem auto;">
+  <div style="font-size: 3.5rem; font-weight: 800; color: var(--primary); line-height: 1;">404</div>
+  <h2 style="font-size: 1.35rem; color: var(--primary); margin: 0.75rem 0 0.5rem;">Resource Not Found</h2>
+  <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+    The requested privacy policy document, snapshot, or application route does not exist in the database.
+  </p>
+  <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">Return to Dashboard</a>
+</div>
+{% endblock %}

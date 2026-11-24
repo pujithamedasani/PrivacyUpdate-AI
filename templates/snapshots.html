@@ -1,0 +1,419 @@
+{% extends "base.html" %}
+
+{% block title %}Historical Snapshots - PrivacyUpdate AI{% endblock %}
+{% block breadcrumb %}Historical Snapshots{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Historical Policy Snapshots</h1>
+    <p class="page-subtitle">Cryptographically hashed snapshots, version history, and Memento TimeMap archival lineage</p>
+  </div>
+  <div style="display: flex; gap: 0.5rem;">
+    <button class="btn btn-secondary" onclick="openMementoModal()">
+      <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      <span>Memento TimeMap Discovery</span>
+    </button>
+    <button class="btn btn-primary" onclick="openCompareModal()">
+      <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+      <span>Compare 2 Versions</span>
+    </button>
+  </div>
+</div>
+
+<!-- Source Filter Bar -->
+<div class="card" style="padding: 0.85rem 1.25rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+  <div style="display: flex; align-items: center; gap: 0.75rem;">
+    <label style="font-size: 0.85rem; font-weight: 600;">Filter by Website:</label>
+    <select class="form-select" id="snapshot-filter-select" style="width: auto; min-width: 260px;">
+      <option value="">All Monitored Websites</option>
+      {% for s in sources %}
+      <option value="{{ s.id }}" {% if selected_source_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div style="font-size: 0.82rem; color: var(--text-muted);">
+    Total Snapshots: <strong>{{ snapshots|length }}</strong>
+  </div>
+</div>
+
+<!-- Snapshots Table -->
+<div class="table-responsive">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Website Name</th>
+        <th>Version Tag</th>
+        <th>Snapshot Date</th>
+        <th>Extraction Method</th>
+        <th>SHA-256 Digest</th>
+        <th>Memento Lineage</th>
+        <th style="text-align: right;">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for sn in snapshots %}
+      <tr>
+        <td>
+          <strong>{{ sn.source_name }}</strong>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">ID: #{{ sn.id }}</div>
+        </td>
+        <td>
+          <span class="badge {% if 'Active' in sn.version_tag %}badge-success{% else %}badge-neutral{% endif %}">
+            {{ sn.version_tag }}
+          </span>
+        </td>
+        <td style="font-size: 0.82rem; color: var(--text-muted); white-space: nowrap;">
+          {{ sn.snapshot_date|datetime_format }}
+        </td>
+        <td>
+          <span class="badge badge-neutral" style="font-size: 0.72rem;">{{ sn.extraction_method }}</span>
+        </td>
+        <td>
+          <code style="font-size: 0.75rem; background: var(--bg-subtle); padding: 0.2rem 0.4rem; border-radius: 3px; border: 1px solid var(--border-color); color: var(--primary);" title="{{ sn.content_hash }}">
+            {{ sn.content_hash[:16] }}...
+          </code>
+        </td>
+        <td>
+          {% if sn.memento_archive_url %}
+          <a href="{{ sn.memento_archive_url }}" target="_blank" rel="noopener" class="badge badge-info" style="text-decoration: none;" title="{{ sn.memento_archive_url }}">
+            Wayback Memento &nearr;
+          </a>
+          {% else %}
+          <span style="font-size: 0.78rem; color: var(--text-light);">Direct Live Capture</span>
+          {% endif %}
+        </td>
+        <td style="text-align: right; white-space: nowrap;">
+          <button class="btn btn-secondary btn-sm btn-view-snap" data-id="{{ sn.id }}" data-name="{{ sn.source_name }}" data-version="{{ sn.version_tag }}">
+            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            <span>View Content</span>
+          </button>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+          No snapshots collected yet. Trigger a scan from the Privacy Monitoring page to capture initial snapshots.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- View Snapshot Content Modal -->
+<div class="modal-backdrop" id="view-snapshot-modal">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-header">
+      <h3 class="modal-title">
+        Snapshot: <span id="snap-modal-title" style="color: var(--primary);"></span>
+      </h3>
+      <button class="modal-close" onclick="closeModal('view-snapshot-modal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="display: flex; gap: 1rem; margin-bottom: 1rem; font-size: 0.8rem; color: var(--text-muted); flex-wrap: wrap;">
+        <div>Date: <strong id="snap-modal-date" style="color: var(--text-primary);"></strong></div>
+        <div>SHA-256: <code id="snap-modal-hash" style="color: var(--primary);"></code></div>
+      </div>
+      <div class="card" style="margin-bottom: 0; background: var(--bg-subtle); max-height: 480px; overflow-y: auto;">
+        <pre id="snap-modal-content" style="font-size: 0.82rem; font-family: ui-monospace, monospace; white-space: pre-wrap; word-break: break-word;"></pre>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('view-snapshot-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Compare 2 Snapshots Modal -->
+<div class="modal-backdrop" id="compare-modal">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-header">
+      <h3 class="modal-title">Compare Snapshot Revisions</h3>
+      <button class="modal-close" onclick="closeModal('compare-modal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: flex-end; margin-bottom: 1.25rem;">
+        <div>
+          <label class="form-label">Previous Baseline Snapshot (Old)</label>
+          <select class="form-select" id="cmp-old-id">
+            {% for sn in snapshots %}
+            <option value="{{ sn.id }}">{{ sn.source_name }} - {{ sn.version_tag }} ({{ sn.snapshot_date|datetime_format }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Subsequent Snapshot (New)</label>
+          <select class="form-select" id="cmp-new-id">
+            {% for sn in snapshots %}
+            <option value="{{ sn.id }}" {% if loop.index == 2 %}selected{% endif %}>{{ sn.source_name }} - {{ sn.version_tag }} ({{ sn.snapshot_date|datetime_format }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="executeComparison()">Compute Diff</button>
+      </div>
+
+      <div id="cmp-results-container" style="display: none;">
+        <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; padding: 0.75rem 1rem; background: var(--bg-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+          <div>Content Similarity: <strong id="cmp-similarity" style="color: var(--primary);"></strong></div>
+          <div style="color: var(--supporting);">|</div>
+          <div>Modifications Detected: <strong id="cmp-count" style="color: var(--accent);"></strong></div>
+          <div style="margin-left: auto;">
+            <button class="btn btn-accent btn-sm" id="btn-run-ai-pair" onclick="analyzeSelectedPair()">
+              Run OpenAI Analysis on this Diff
+            </button>
+          </div>
+        </div>
+
+        <div id="cmp-diff-panes" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('compare-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Memento Discovery Modal -->
+<div class="modal-backdrop" id="memento-modal">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-header">
+      <h3 class="modal-title">Memento TimeMap Historical Discovery (RFC 7089)</h3>
+      <button class="modal-close" onclick="closeModal('memento-modal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+        Query the Internet Archive Wayback Machine and Memento aggregators to discover temporal captures of any privacy policy URL. You can import any archive capture into local database snapshots.
+      </p>
+
+      <div style="display: flex; gap: 0.75rem; margin-bottom: 1.25rem;">
+        <input type="url" class="form-control" id="memento-url-input" placeholder="https://example.com/privacy" value="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement">
+        <button class="btn btn-primary" style="white-space: nowrap;" onclick="queryMementoTimeMap()">Query Archives</button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Archive Timestamp</th>
+              <th>Wayback URI</th>
+              <th style="text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="memento-results-tbody">
+            <tr>
+              <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">
+                Enter a target URL above to query historical captures.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('memento-modal')">Close</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const filterSelect = document.getElementById('snapshot-filter-select');
+  if (filterSelect) {
+    filterSelect.addEventListener('change', function() {
+      window.location.href = this.value ? '/snapshots?source_id=' + this.value : '/snapshots';
+    });
+  }
+});
+
+document.addEventListener('click', (e) => {
+  const viewBtn = e.target.closest('.btn-view-snap');
+  if (viewBtn) {
+    viewSnapshotContent(viewBtn.dataset.id, viewBtn.dataset.name, viewBtn.dataset.version);
+    return;
+  }
+  const importBtn = e.target.closest('.btn-import-memento');
+  if (importBtn) {
+    importMemento(importBtn.dataset.uri, importBtn.dataset.datetime);
+    return;
+  }
+});
+
+async function viewSnapshotContent(id, sourceName, versionTag) {
+  document.getElementById('snap-modal-title').textContent = `${sourceName} (${versionTag})`;
+  openModal('view-snapshot-modal');
+  document.getElementById('snap-modal-content').textContent = 'Loading content...';
+
+  try {
+    const res = await fetch(`/api/snapshots/${id}`);
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('snap-modal-date').textContent = data.snapshot.snapshot_date;
+      document.getElementById('snap-modal-hash').textContent = data.snapshot.content_hash;
+      document.getElementById('snap-modal-content').textContent = data.snapshot.content;
+    }
+  } catch (err) {
+    document.getElementById('snap-modal-content').textContent = `Error: ${err.message}`;
+  }
+}
+
+function openCompareModal() {
+  openModal('compare-modal');
+  executeComparison();
+}
+
+async function executeComparison() {
+  const oldId = document.getElementById('cmp-old-id').value;
+  const newId = document.getElementById('cmp-new-id').value;
+
+  if (oldId === newId) {
+    showToast('Please select two distinct snapshot records to compare.', 'warning');
+    return;
+  }
+
+  const container = document.getElementById('cmp-results-container');
+  const panes = document.getElementById('cmp-diff-panes');
+  container.style.display = 'block';
+  panes.innerHTML = '<div style="text-align:center; padding:1.5rem; color:var(--text-muted);">Comparing text structures...</div>';
+
+  try {
+    const res = await fetch(`/api/snapshots/compare?old_id=${oldId}&new_id=${newId}`);
+    const data = await res.json();
+
+    if (data.success) {
+      document.getElementById('cmp-similarity').textContent = `${(data.similarity * 100).toFixed(1)}%`;
+      document.getElementById('cmp-count').textContent = `${data.diff_count} clauses changed`;
+
+      if (data.changes.length === 0) {
+        panes.innerHTML = '<div class="card" style="text-align:center; padding:2rem; color:var(--text-muted);">The text in these two versions is 100% identical.</div>';
+        return;
+      }
+
+      panes.innerHTML = data.changes.map(ch => {
+        let badgeType = 'badge-warning';
+        if (ch.change_type === 'Added') badgeType = 'badge-success';
+        if (ch.change_type === 'Removed') badgeType = 'badge-danger';
+
+        return `
+          <div class="card" style="margin-bottom: 0;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.75rem;">
+              <strong style="color:var(--primary); font-size:0.9rem;">Section: ${escapeHtml(ch.affected_section)}</strong>
+              <span class="badge ${badgeType}">${ch.change_type}</span>
+            </div>
+            <div class="diff-container">
+              <div class="diff-pane old">
+                <div style="font-weight:600; color:var(--accent); margin-bottom:0.25rem; font-size:0.75rem;">Previous:</div>
+                ${escapeHtml(ch.previous_content) || '<em style="color:var(--text-light);">(No previous text)</em>'}
+              </div>
+              <div class="diff-pane new">
+                <div style="font-weight:600; color:var(--primary); margin-bottom:0.25rem; font-size:0.75rem;">Updated:</div>
+                ${escapeHtml(ch.updated_content) || '<em style="color:var(--text-light);">(Section removed)</em>'}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  } catch (err) {
+    panes.innerHTML = `<div style="color:var(--status-danger); padding:1rem;">Comparison failed: ${err.message}</div>`;
+  }
+}
+
+async function analyzeSelectedPair() {
+  const oldId = document.getElementById('cmp-old-id').value;
+  const newId = document.getElementById('cmp-new-id').value;
+  showToast('Dispatched diff to AI analysis engine...', 'info');
+
+  try {
+    const res = await fetch('/api/changes/analyze-pair', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ old_snapshot_id: oldId, new_snapshot_id: newId })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message, 'success');
+      setTimeout(() => window.location.href = '/changes', 1000);
+    } else {
+      showToast(data.error || 'AI analysis failed.', 'error');
+    }
+  } catch (err) {
+    showToast(`Error: ${err.message}`, 'error');
+  }
+}
+
+function openMementoModal() {
+  openModal('memento-modal');
+}
+
+async function queryMementoTimeMap() {
+  const url = document.getElementById('memento-url-input').value.trim();
+  if (!url) {
+    showToast('Please provide a URL to discover.', 'warning');
+    return;
+  }
+
+  const tbody = document.getElementById('memento-results-tbody');
+  tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:1.5rem; color:var(--text-muted);">Querying Wayback Machine & Memento Aggregator...</td></tr>';
+
+  try {
+    const res = await fetch(`/api/memento/discover?url=${encodeURIComponent(url)}`);
+    const data = await res.json();
+
+    if (data.success && data.mementos && data.mementos.length > 0) {
+      tbody.innerHTML = data.mementos.map(m => `
+        <tr>
+          <td><strong>${m.datetime}</strong></td>
+          <td>
+            <a href="${m.uri}" target="_blank" rel="noopener" style="font-size:0.8rem; color:var(--primary); text-decoration:none;">
+              ${m.uri} &nearr;
+            </a>
+          </td>
+          <td style="text-align:right;">
+            <button class="btn btn-primary btn-sm btn-import-memento" data-uri="${encodeURIComponent(m.uri)}" data-datetime="${m.datetime}">
+              Import Snapshot
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    } else {
+      tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:1.5rem; color:var(--text-muted);">${data.error || 'No historical captures found for this URL.'}</td></tr>`;
+    }
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="3" style="color:var(--status-danger); text-align:center; padding:1rem;">Memento lookup error: ${err.message}</td></tr>`;
+  }
+}
+
+async function importMemento(uriEncoded, mementoDate) {
+  const uri = decodeURIComponent(uriEncoded);
+  const filterVal = document.getElementById('snapshot-filter-select')?.value;
+  const sourceId = parseInt(filterVal || '1', 10);
+
+  showToast('Fetching and importing archive snapshot...', 'info');
+
+  try {
+    const res = await fetch('/api/memento/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        source_id: sourceId,
+        memento_uri: uri,
+        memento_date: mementoDate
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message, 'success');
+      closeModal('memento-modal');
+      setTimeout(() => window.location.reload(), 1000);
+    } else {
+      showToast(data.error || 'Import failed.', 'error');
+    }
+  } catch (err) {
+    showToast(`Import error: ${err.message}`, 'error');
+  }
+}
+</script>
+{% endblock %}
