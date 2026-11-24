@@ -3,10 +3,17 @@
 .env.*
 !.env.example
 
+# API keys and credentials
+*.pem
+*.key
+secrets/
+credentials/
+
 # Python cache files
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyd
 
 # Virtual environments
 venv/
@@ -14,20 +21,20 @@ venv/
 env/
 ENV/
 
-# SQLite database and backups
+# SQLite databases and database backups
 *.db
 *.sqlite
 *.sqlite3
-data/backups/
+*.db-journal
+*.sqlite-journal
+
+# Application data and backups
+data/*
+!data/.gitkeep
 
 # Uploaded documents and generated files
 uploads/*
 !uploads/.gitkeep
-
-# Keep data directory structure
-data/*
-!data/.gitkeep
-!data/backups/
 
 # Flask instance files
 instance/
@@ -39,13 +46,17 @@ logs/
 # Testing and coverage
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
+.tox/
+.nox/
 
 # IDE and editor files
 .vscode/
 .idea/
 *.swp
 *.swo
+*.code-workspace
 
 # OS-generated files
 .DS_Store
@@ -56,7 +67,16 @@ Desktop.ini
 build/
 dist/
 *.egg-info/
+.eggs/
 
 # Temporary files
 *.tmp
+*.temp
 *.bak
+*.old
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Node.js (if frontend tooling is added)
+node_modules/
